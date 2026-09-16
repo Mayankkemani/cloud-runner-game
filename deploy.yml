@@ -1,0 +1,49 @@
+name: Build and Deploy Cloud Runner
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pygbag
+        run: pip install pygbag
+
+      - name: Build web (WebAssembly) version
+        run: python -m pygbag --build main.py
+
+      # This produces a "build/web" folder containing index.html + game files
+      - name: Show build output
+        run: ls -la build/web
+
+      - name: Deploy to EC2 via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "build/web/*"
+          target: "/home/ubuntu/cloud-runner-deploy"
+          strip_components: 2
+
+      - name: Move files into Nginx web root
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo rm -rf /var/www/html/*
+            sudo cp -r /home/ubuntu/cloud-runner-deploy/* /var/www/html/
+            sudo systemctl restart nginx
