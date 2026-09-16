@@ -28,7 +28,7 @@ pipeline {
                     docker create --name temp-cloud-runner ${IMAGE_NAME}
                     rm -rf build_output
                     mkdir -p build_output
-                    docker cp temp-cloud-runner:/usr/share/nginx/html/. build_output/
+                   docker cp temp-cloud-runner:/app/build/web/. build_output/
                     docker rm temp-cloud-runner
                 '''
             }
