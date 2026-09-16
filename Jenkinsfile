@@ -23,16 +23,17 @@ pipeline {
         }
 
         stage('Extract Built Web Files') {
-            steps {
-                sh '''
-                    docker create --name temp-cloud-runner ${IMAGE_NAME}
-                    rm -rf build_output
-                    mkdir -p build_output
-                   docker cp temp-cloud-runner:/app/build/web/. build_output/
-                    docker rm temp-cloud-runner
-                '''
-            }
-        }
+    steps {
+        sh '''
+            docker rm -f temp-cloud-runner || true
+            docker create --name temp-cloud-runner ${IMAGE_NAME}
+            rm -rf build_output
+            mkdir -p build_output
+            docker cp temp-cloud-runner:/app/build/web/. build_output/
+            docker rm temp-cloud-runner
+        '''
+    }
+}
 
         stage('Deploy to EC2 (system Nginx)') {
             steps {
