@@ -118,15 +118,18 @@ class Player:
         self.score = 0
         self.alive = True
 
-    def handle_input(self, keys):
+    def handle_input(self, keys, touch=None):
+        # touch is an optional dict: {"left": bool, "right": bool, "jump": bool}
+        touch = touch or {"left": False, "right": False, "jump": False}
+
         self.vel_x = 0
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_a] or touch["left"]:
             self.vel_x = -MOVE_SPEED
             self.facing_right = False
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d] or touch["right"]:
             self.vel_x = MOVE_SPEED
             self.facing_right = True
-        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground:
+        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w] or touch["jump"]) and self.on_ground:
             self.vel_y = JUMP_STRENGTH
             self.on_ground = False
 
@@ -229,6 +232,39 @@ def draw_hud(surface, player, level_length, camera_x):
     pygame.draw.rect(surface, (60, 200, 120), (WIDTH - bar_w - 20, 16, int(bar_w * progress), 14), border_radius=6)
 
 
+# ---------- On-screen touch controls (for mobile browsers) ----------
+BTN_RADIUS = 38
+LEFT_BTN = pygame.Rect(30, HEIGHT - 100, BTN_RADIUS * 2, BTN_RADIUS * 2)
+RIGHT_BTN = pygame.Rect(30 + BTN_RADIUS * 2 + 20, HEIGHT - 100, BTN_RADIUS * 2, BTN_RADIUS * 2)
+JUMP_BTN = pygame.Rect(WIDTH - 30 - BTN_RADIUS * 2, HEIGHT - 100, BTN_RADIUS * 2, BTN_RADIUS * 2)
+
+
+def draw_touch_controls(surface):
+    btn_color = (255, 255, 255, 120)
+    for rect, label in [(LEFT_BTN, "<"), (RIGHT_BTN, ">"), (JUMP_BTN, "^")]:
+        s = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        pygame.draw.circle(s, (255, 255, 255, 90), (rect.width // 2, rect.height // 2), rect.width // 2)
+        pygame.draw.circle(s, (255, 255, 255, 180), (rect.width // 2, rect.height // 2), rect.width // 2, 3)
+        surface.blit(s, rect.topleft)
+        label_surf = font_big.render(label, True, (255, 255, 255))
+        surface.blit(label_surf, label_surf.get_rect(center=rect.center))
+
+
+def get_touch_state():
+    """Reads current mouse/touch position+press (works for touch via SDL2 in browsers)."""
+    state = {"left": False, "right": False, "jump": False}
+    pressed = pygame.mouse.get_pressed()
+    if pressed[0]:
+        pos = pygame.mouse.get_pos()
+        if LEFT_BTN.collidepoint(pos):
+            state["left"] = True
+        elif RIGHT_BTN.collidepoint(pos):
+            state["right"] = True
+        elif JUMP_BTN.collidepoint(pos):
+            state["jump"] = True
+    return state
+
+
 def draw_center_message(surface, title, subtitle):
     overlay = pygame.Surface((WIDTH, HEIGHT))
     overlay.set_alpha(160)
@@ -266,9 +302,10 @@ async def main():
                     game_over = False
 
         keys = pygame.key.get_pressed()
+        touch = get_touch_state()
 
         if not game_over and not won:
-            player.handle_input(keys)
+            player.handle_input(keys, touch)
             player.update(platforms)
 
             for enemy in enemies:
@@ -313,6 +350,7 @@ async def main():
 
         player.draw(screen, camera_x)
         draw_hud(screen, player, level_length, camera_x)
+        draw_touch_controls(screen)
 
         if game_over:
             draw_center_message(screen, "Game Over", "Press R to restart")
