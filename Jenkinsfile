@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        EC2_HOST = '13.203.203.74'
+        EC2_HOST = '43.204.218.83'
         EC2_USER = 'ubuntu'
         REMOTE_DIR = '/home/ubuntu/cloud-runner-deploy'
         IMAGE_NAME = 'cloud-runner-game'
